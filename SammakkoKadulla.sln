@@ -1,0 +1,21 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SammakkoKadulla", "SammakkoKadulla\SammakkoKadulla.csproj", "{55E2FACB-777C-4EB7-B0D9-F81B247FB453}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A42D8BC1-4A5E-4CFF-A602-AF9C41AD4EEA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{55E2FACB-777C-4EB7-B0D9-F81B247FB453}.Debug|x86.ActiveCfg = Debug|x86
+		{55E2FACB-777C-4EB7-B0D9-F81B247FB453}.Debug|x86.Build.0 = Debug|x86
+		{55E2FACB-777C-4EB7-B0D9-F81B247FB453}.Release|x86.ActiveCfg = Release|x86
+		{55E2FACB-777C-4EB7-B0D9-F81B247FB453}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+	EndGlobalSection
+EndGlobal
