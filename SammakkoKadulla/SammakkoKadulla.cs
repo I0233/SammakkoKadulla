@@ -10,10 +10,10 @@ public class SammakkoKadulla : PhysicsGame
 
 	private Image taustaKuva = LoadImage("Tausta");
 	private PlatformCharacter sammakko;
-	private Vector paikka = new Vector (0, 0);
+	private Vector paikka = new Vector (0, -350);
 	private Image[] sammakkoAnimKuvat = LoadImages("Sammakko/sammakko_0", "Sammakko/sammakko_1", "Sammakko/sammakko_2",
 		"Sammakko/sammakko_3", "Sammakko/sammakko_4", "Sammakko/sammakko_5", "Sammakko/sammakko_6");
-	Direction suunta;
+	
 	public override void Begin (){
 		Keyboard.Listen (Key.F1, ButtonState.Pressed, ShowControlHelp, "Näytä ohjeet");
 		PhoneBackButton.Listen (ConfirmExit, "Lopeta peli");
@@ -21,7 +21,7 @@ public class SammakkoKadulla : PhysicsGame
 
 		LuoTaustaKuva ();
 		LuoSammakko (paikka,70,70);
-		AsetaOhjaimet ();
+		LiikutaSammakko ();
 		Camera.ZoomFactor = 1.2;
 		Camera.StayInLevel = true;
 		Camera.Follow (sammakko);
@@ -46,23 +46,22 @@ public class SammakkoKadulla : PhysicsGame
 
 	public void LuoTaustaKuva (){
 		Level.Background.Image = taustaKuva;
-		Level.Background.Height = 500;
-		Level.Background.Width = 500;
+		Level.Background.Height = 800;
+		Level.Background.Width = 1000;
 		Level.CreateBorders ();
 	}
 
-	void AsetaOhjaimet()
-	{
-		Keyboard.Listen(Key.Right, ButtonState.Pressed, MuutaSuunta, null, Direction.Right);
-		Keyboard.Listen(Key.Left, ButtonState.Pressed, MuutaSuunta, null, Direction.Left);
-		Keyboard.Listen(Key.Up, ButtonState.Pressed, MuutaSuunta, null, Direction.Up);
-		Keyboard.Listen(Key.Down, ButtonState.Pressed, MuutaSuunta, null, Direction.Down);
-		Keyboard.Listen(Key.Escape, ButtonState.Pressed, ConfirmExit, "Lopeta peli");
-	}
+	public void LiikutaSammakko (){
 
-	void MuutaSuunta(Direction uusiSuunta)
-	{
-		suunta = uusiSuunta;
+		Keyboard.Listen(Key.Left,  ButtonState.Down,
+			LiikutaPelaajaa, null, new Vector( -4000, 0 ));
+		Keyboard.Listen(Key.Right, ButtonState.Down, 
+			LiikutaPelaajaa, null, new Vector( 4000, 0 ));
+		Keyboard.Listen(Key.Up,    ButtonState.Down, 
+			LiikutaPelaajaa, null, new Vector( 0, 500 ));
+		Keyboard.Listen(Key.Down,  ButtonState.Down, 
+			LiikutaPelaajaa, null, new Vector( 0, -500 ));
+
 	}
 
 	void LiikutaPelaajaa(Vector vektori)
