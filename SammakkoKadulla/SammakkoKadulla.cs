@@ -15,13 +15,13 @@ public class SammakkoKadulla : PhysicsGame
 	private Image taustaKuva; //Taustakuvaa varten 
 	private Image[] pyorailjat;
 	private Image[] liikenneAutot;
-	private double LiikkumisNopeus = 200;
-	private double loikkimisNopeus = 100; 
+	private double LiikkumisNopeus = 800;
+	private double loikkimisNopeus = 400; 
 	private PlatformCharacter sammakko; //Sammakon hahmo
 	private Vector paikka = new Vector (0, -350); 
 	private Image[] sammakkoAnimKuvat;
 	private Image[] poliisiAutoAnim;
-
+	private bool flipped = false;
 	#endregion
 
 	#region Pelin alustaminen
@@ -36,7 +36,7 @@ public class SammakkoKadulla : PhysicsGame
 		Camera.ZoomFactor = 1.2;
 		Camera.StayInLevel = true;
 		Camera.Follow(sammakko);
-		MessageDisplay.Add( "Etsi iso tähti!" );
+		MessageDisplay.Add( "Nappaa kärppästä!!" );
 	}
 	#endregion
 
@@ -89,37 +89,52 @@ public class SammakkoKadulla : PhysicsGame
 
 	public void LiikutaSammakko (){
 		Keyboard.Listen (Key.F1, ButtonState.Pressed, ShowControlHelp, "Näytä ohjeet");
-		Keyboard.Listen( Key.Up, ButtonState.Pressed, LoikiYlos, null, sammakko, loikkimisNopeus );
+		Keyboard.Listen( Key.Up, ButtonState.Pressed, LoikiYlos, null, sammakko, loikkimisNopeus);
 		Keyboard.Listen( Key.Down, ButtonState.Pressed, LoikiAlas, null, sammakko, -loikkimisNopeus );
 		Keyboard.Listen( Key.Up, ButtonState.Released, sammakko.StopVertical, null );
 		Keyboard.Listen( Key.Down, ButtonState.Released,sammakko.StopVertical , null );
-		Keyboard.Listen( Key.Left, ButtonState.Pressed, LiikutaOikealleVasemmalle, null, sammakko, -LiikkumisNopeus );
-		Keyboard.Listen( Key.Right, ButtonState.Pressed, LiikutaOikealleVasemmalle, null, sammakko, LiikkumisNopeus );
+		Keyboard.Listen( Key.Left, ButtonState.Pressed, LiikutaVasemmalle, null, sammakko, -LiikkumisNopeus );
+		Keyboard.Listen( Key.Right, ButtonState.Pressed, LiikutaOikealle, null, sammakko, LiikkumisNopeus );
 		Keyboard.Listen( Key.Left, ButtonState.Released, sammakko.StopHorizontal, null);
 		Keyboard.Listen( Key.Right, ButtonState.Released, sammakko.StopHorizontal, null );
 	}
 
 
-	void LiikutaOikealleVasemmalle( PlatformCharacter hahmo, double nopeus)
+	void LiikutaVasemmalle( PlatformCharacter hahmo, double nopeus)
 	{
+		hahmo.Walk (nopeus);
+		MessageDisplay.Add (hahmo.Angle.Degrees.ToString());
+		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
+	}
+
+	void LiikutaOikealle( PlatformCharacter hahmo, double nopeus)
+	{
+		Direction oikea = new Direction ();
+		KaannaSammakko (oikea);
+		MessageDisplay.Add (hahmo.Angle.Degrees.ToString());
 		hahmo.Walk (nopeus);
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
 	public void LoikiYlos(PlatformCharacter hahmo, double nopeus)
 	{
+		MessageDisplay.Add (hahmo.Angle.Degrees.ToString());
 		hahmo.ForceJump (nopeus);
-		MessageDisplay.Add(sammakko.TurnsWhenWalking.ToString());
+		if (flipped) {
+			hahmo.FlipImage ();
+			flipped = false;
+		}
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
 	public void LoikiAlas(PlatformCharacter hahmo, double nopeus)
 	{
 		hahmo.ForceJump (nopeus);
-		MessageDisplay.Add(sammakko.Top.ToString());
-		if (sammakko.Angle.Degrees == 0) {
-			sammakko.FlipImage ();
+		if (!flipped) {
+			hahmo.FlipImage ();
+			flipped = true;
 		}
+	
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
@@ -133,5 +148,9 @@ public class SammakkoKadulla : PhysicsGame
 		}
 	}
 
+	public void KaannaSammakko(Direction suunta)
+	{
+		
+	}
 }
 
