@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Jypeli;
+using Jypeli.Controls;
+using Jypeli.Widgets;
 
 /// @author: Ali Nadhum
 /// @version: 0.1
@@ -11,22 +13,25 @@ using Jypeli;
 /// </summary>
 public class SammakkoKadulla : PhysicsGame
 {
-	#region Muuttujat
-	private Image taustaKuva; //Taustakuvaa varten 
-	private Image[] pyorailjat;
-	private Image[] liikenneAutot;
-	private Image[] sammakkoAnimKuvat;
-	private Image[] poliisiAutoAnim;
-	private Image pensasVaaleaKuva;
-	private Image pensasTummaKuva;
+	#region Pelin muuttujat
+	Image taustaKuva; //Taustakuvaa varten 
+	Image sammakonKuva;
+	Image[] pyorailjienKuva;
+	Image[] sammakkoAnimKuvat;
+	Image[] poliisiAutoAnim;
+	Image pensasVaaleaKuva;
+	Image pensasTummaKuva;
 	private double LiikkumisNopeus = 800;
 	private double loikkimisNopeus = 400; 
-	private PlatformCharacter sammakko; //Sammakon hahmo
-	private Vector paikka = new Vector (0, -350); 
+	PlatformCharacter sammakko; //Sammakon hahmo
+	Vector paikka;
+	PhysicsObject pensasVaalea;
+	PhysicsObject pensasTumma;
 	private bool flipped = false;
-	private Angle kulma;
+	Angle kulma;
+	DoubleMeter	aikaMittari;
+	Timer aikaLaskuri;
 	#endregion
-
 
 	#region Pelin alustaminen
 	public override void Begin ()
@@ -34,24 +39,51 @@ public class SammakkoKadulla : PhysicsGame
 		Keyboard.Listen(Key.F1, ButtonState.Pressed, ShowControlHelp, "Näytä ohjeet");
 		PhoneBackButton.Listen(ConfirmExit, "Lopeta peli");
 		Keyboard.Listen(Key.Escape, ButtonState.Pressed, ConfirmExit, "Lopeta peli");
+		paikka = new Vector (0, -350);
 		LataaKuvat();
 		LuoTaustaKuva(1000, 800);
-		LuoPensaat (100,100,50,50);
-		LuoSammakko(paikka,90,90);
+		int x = -500;
+		for (int i = 0; i <= 8; i++) {
+			LuoPensaat (x, 100, 65, 65);
+			LuoPensaat (x, -350, 75, 75);
+			if (i == 3)
+			{
+				x = 0;
+			}
+			x += 120;
+		}
+		LuoSammakko(paikka,60,60);
+		LuoAikaLaskuri ();
 		Camera.ZoomFactor = 1.2;
 		Camera.StayInLevel = true;
 		Camera.Follow(sammakko);
 		kulma = new Angle ();
 		MessageDisplay.Add( "Nappaa kärppästä!!" );
-		SetWindowSize (1200, 750);
+		SetWindowSize (1500, 750);
 	}
 	#endregion
-
 
 	#region Kuvan haku
 	public void LataaKuvat()
 	{
         taustaKuva = LoadImage ("Tausta");
+		sammakonKuva = LoadImage ("Sammakko/sammakko_0");
+		pyorailjienKuva = LoadImages (
+			"Pyorailijat/Pyora1",
+			"Pyorailijat/Pyora2",
+			"Pyorailijat/Pyora3",
+			"Pyorailijat/Pyora5",
+			"Pyorailijat/Pyora6",
+			"Pyorailijat/Pyora7",
+			"Pyorailijat/Pyora8",
+			"Pyorailijat/Pyora9",
+			"Pyorailijat/Pyora10",
+			"Pyorailijat/Pyora11",
+			"Pyorailijat/Pyora12",
+			"Pyorailijat/Pyora13",
+			"Pyorailijat/Pyora14",
+			"Pyorailijat/Pyora15"
+		);
 		sammakkoAnimKuvat = LoadImages(
 			"Sammakko/sammakko_0", 
 			"Sammakko/sammakko_1", 
@@ -67,30 +99,10 @@ public class SammakkoKadulla : PhysicsGame
 			"Poliisi1.3",
 			"Poliisi1.2"
 		);
-		liikenneAutot = LoadImages (
-			"MusAuto1",
-			"Rekka1",
-			"PunAuto1",
-			"SinAuto1",
-			"Poliisi1.1"
-		);
 		pensasVaaleaKuva = LoadImage ("Pensaat/Pensas1");
 		pensasTummaKuva = LoadImage ("Pensaat/Pensas2");
-		 
 	}
 	#endregion
-
-
-	public void LuoSammakko(Vector paikka, double leveys, double korkeus)
-	{
-		sammakko = new PlatformCharacter(leveys, korkeus);
-		sammakko.Image = LoadImage ("Sammakko/sammakko_0");
-		sammakko.Position = paikka;
-		sammakko.Mass = 0.1;
-		Add(sammakko);
-		LiikutaSammakko ();
-	}
-
 
 	public void LuoTaustaKuva (int leveys, int korkeus){
 	 	Level.Background.Image = taustaKuva;
@@ -99,6 +111,17 @@ public class SammakkoKadulla : PhysicsGame
 	 	Level.CreateBorders ();
 	}
 
+	#region Sammakon logiikka
+	public void LuoSammakko(Vector paikka, double leveys, double korkeus)
+	{
+		sammakko = new PlatformCharacter(leveys, korkeus, Shape.FromImage(sammakonKuva));
+		sammakko.Image = sammakonKuva;
+		sammakko.Position = paikka;
+		sammakko.SizingByLayout = true;
+		Add(sammakko);
+		LiikutaSammakko ();
+	}
+		
 
 	public void LiikutaSammakko (){
 		Keyboard.Listen (Key.F1, ButtonState.Pressed, ShowControlHelp, "Näytä ohjeet");
@@ -115,9 +138,10 @@ public class SammakkoKadulla : PhysicsGame
 
 	void LiikutaVasemmalle( PlatformCharacter hahmo, double nopeus)
 	{
-		if (kulma.Degrees == 0) 
+		if (kulma.Degrees == 0)
 		{
 			kulma.Degrees = 90;
+
 		} 
 		else if (kulma.Degrees > 0 && kulma.Degrees < 90)
 		{
@@ -167,7 +191,6 @@ public class SammakkoKadulla : PhysicsGame
 			hahmo.FlipImage ();
 			flipped = true;
 		}
-	
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
@@ -181,30 +204,83 @@ public class SammakkoKadulla : PhysicsGame
 			animaatio.Stop ();
 		}
 	}
+	#endregion
 
-
-	void LuoPensaat(double x, double y,double leveys, double korkeus)
+	public void LuoPensaat(double x, double y,double leveys, double korkeus)
 	{
-		PhysicsObject pensasVaalea = new PhysicsObject(leveys, korkeus -2);
-		PhysicsObject pensasTumma = new PhysicsObject(leveys, korkeus);
-		pensasVaalea.Image = pensasVaaleaKuva;
+		pensasVaalea = PhysicsObject.CreateStaticObject(leveys, korkeus, Shape.FromImage(pensasVaaleaKuva));
+		pensasTumma = PhysicsObject.CreateStaticObject(leveys, korkeus, Shape.FromImage(pensasTummaKuva));
+		pensasVaalea.Image = pensasVaaleaKuva; 
 		pensasTumma.Image = pensasTummaKuva;
-		pensasVaalea.Mass = 1200;
-		pensasTumma.Mass = 1200;
-		pensasTumma.Tag = "pTumma";
+		pensasVaalea.MakeStatic ();
+		pensasTumma.MakeStatic ();
 		pensasVaalea.Tag = "pVaalea";
-		for (int i = 0; i <= 20; i++) 
-		{
-			pensasTumma.X = x;
-			pensasVaalea.X = x + 50;
-			pensasTumma.Y = y;
-			pensasVaalea.Y = y;
-			Add (pensasTumma, -1);
-			Add (pensasVaalea, -1);
-			x = i + 1;
-		}
+		pensasTumma.Tag = "pTumma";
+		pensasTumma.X = x;
+		pensasVaalea.X = x + 60;
+		pensasTumma.Y = y;
+		pensasVaalea.Y = y;
+		Add (pensasTumma);
+		Add (pensasVaalea);
 	}
 
+
+	public void Pyorailija(Image pyorailijanKuva, double x, double y,double leveys, double korkeus)
+	{
+		PhysicsObject pyrorailija = new PhysicsObject (leveys, korkeus, Shape.FromImage(pyorailijanKuva));
+		pyrorailija.Image = pyorailijanKuva;
+		pyrorailija.Tag = "pyorailija";
+		pyrorailija.X = x;
+		pyrorailija.Y = y;
+		Add (pyrorailija);
+	}
+
+
+	public void LuoPyorailijat()
+	{
+		Pyorailija (pyorailjienKuva[1], -400, -250, 40, 40);
+	}
+
+
+	public void PyoraAjastin()
+	{
+		Timer ajastin = new Timer ();
+		ajastin.Interval = 0.4;   // tällä voit myös säätää nopeutta
+		ajastin.Timeout += LuoPyorailijat;
+		ajastin.Start();
+	}
+	public void LuoAikaLaskuri()
+	{
+		aikaMittari = new DoubleMeter(10);
+		aikaMittari.MaxValue = 10;
+
+		aikaLaskuri = new Timer();
+		aikaLaskuri.Interval = 0.1;
+		aikaLaskuri.Timeout += LaskeAlaspain;
+		aikaLaskuri.Start();
+
+		ProgressBar aikaPalkki = new ProgressBar(150, 20);
+		aikaPalkki.X = Screen.Left + 150;
+		aikaPalkki.Y = Screen.Top - 20;
+		aikaPalkki.Color = Color.Transparent;
+		aikaPalkki.BarColor = Color.Red;
+		aikaPalkki.BorderColor = Color.Black;
+		aikaPalkki.BindTo (aikaMittari);
+		Add(aikaPalkki);
+	}
+
+	public void LaskeAlaspain()
+	{
+		aikaMittari.Value -= 0.1;
+
+		if (aikaMittari.Value <= 0)
+		{
+			MessageDisplay.Add("Aika loppui...");
+			aikaLaskuri.Stop();
+			ConfirmExit ();
+
+		}
+	}
 
 }
 

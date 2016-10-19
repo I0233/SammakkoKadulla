@@ -2,11 +2,7 @@
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
   <MonoDevelop.Ide.Workbench ActiveDocument="SammakkoKadulla/SammakkoKadulla.cs">
     <Files>
-<<<<<<< HEAD
-      <File FileName="SammakkoKadulla/SammakkoKadulla.cs" Line="29" Column="3" />
-=======
-      <File FileName="SammakkoKadulla/SammakkoKadulla.cs" Line="192" Column="27" />
->>>>>>> ea7ebea87e88939c5d7141e03fb997985cc03635
+      <File FileName="SammakkoKadulla/SammakkoKadulla.cs" Line="240" Column="3" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
