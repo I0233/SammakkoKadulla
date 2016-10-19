@@ -37,6 +37,7 @@ public class SammakkoKadulla : PhysicsGame
 		Camera.StayInLevel = true;
 		Camera.Follow(sammakko);
 		MessageDisplay.Add( "Nappaa kärppästä!!" );
+		SetWindowSize (1200, 750);
 	}
 	#endregion
 
