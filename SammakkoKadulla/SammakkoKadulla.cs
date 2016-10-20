@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Jypeli;
 using Jypeli.Controls;
 using Jypeli.Widgets;
+using Jypeli.Effects;
+using Jypeli.Assets;
 
 /// @author: Ali Nadhum
 /// @version: 0.1
@@ -16,6 +18,7 @@ public class SammakkoKadulla : PhysicsGame
 	#region Pelin muuttujat
 	Image taustaKuva; //Taustakuvaa varten 
 	Image sammakonKuva;
+	Image elamaSydan;
 	Image[] pyorailijatKuva;
 	Image[] sammakkoAnimKuvat;
 	Image[] poliisiAutoAnim;
@@ -27,15 +30,18 @@ public class SammakkoKadulla : PhysicsGame
 	Vector paikka;
 	PhysicsObject pensasVaalea;
 	PhysicsObject pensasTumma;
+	PhysicsObject pyrorailija;
 	private bool flipped = false;
 	Angle kulma;
 	DoubleMeter	aikaMittari;
 	Timer aikaLaskuri;
+	List <Label> sydamet = new List<Label>(5);
 	#endregion
 
 	#region Pelin alustaminen
 	public override void Begin ()
 	{
+
 		Keyboard.Listen(Key.F1, ButtonState.Pressed, ShowControlHelp, "Näytä ohjeet");
 		PhoneBackButton.Listen(ConfirmExit, "Lopeta peli");
 		Keyboard.Listen(Key.Escape, ButtonState.Pressed, ConfirmExit, "Lopeta peli");
@@ -54,13 +60,13 @@ public class SammakkoKadulla : PhysicsGame
 		}
 		LuoSammakko(paikka,60,60);
 		LuoAikaLaskuri ();
+		LuoPelaajanElamaSydamet (Screen.Right - 150, Screen.Top - 40, 25, 25);
 		PyoraAjastin ();
 		Camera.ZoomFactor = 1.2;
 		Camera.StayInLevel = true;
 		Camera.Follow(sammakko);
 		kulma = new Angle ();
-		MessageDisplay.Add( "Nappaa kärppästä!!" );
-		SetWindowSize (1000, 750);
+		SetWindowSize(1024, 768, false); 
 	}
 	#endregion
 
@@ -103,6 +109,7 @@ public class SammakkoKadulla : PhysicsGame
 		);
 		pensasVaaleaKuva = LoadImage ("Pensaat/Pensas1");
 		pensasTummaKuva = LoadImage ("Pensaat/Pensas2");
+		elamaSydan = LoadImage ("Elama");
 	}
 	#endregion
 
@@ -125,8 +132,8 @@ public class SammakkoKadulla : PhysicsGame
 	}
 		
 
-	public void LiikutaSammakko (){
-		Keyboard.Listen (Key.F1, ButtonState.Pressed, ShowControlHelp, "Näytä ohjeet");
+	public void LiikutaSammakko ()
+	{
 		Keyboard.Listen( Key.Up, ButtonState.Pressed, LoikiYlos, null, sammakko, loikkimisNopeus);
 		Keyboard.Listen( Key.Down, ButtonState.Pressed, LoikiAlas, null, sammakko, -loikkimisNopeus );
 		Keyboard.Listen( Key.Up, ButtonState.Released, sammakko.StopVertical, null );
@@ -135,6 +142,7 @@ public class SammakkoKadulla : PhysicsGame
 		Keyboard.Listen( Key.Right, ButtonState.Pressed, LiikutaOikealle, null, sammakko, LiikkumisNopeus );
 		Keyboard.Listen( Key.Left, ButtonState.Released, sammakko.StopHorizontal, null);
 		Keyboard.Listen( Key.Right, ButtonState.Released, sammakko.StopHorizontal, null );
+		AddCollisionHandler(sammakko, "pyorailija", PelaajaOsuu);
 	}
 
 
@@ -229,13 +237,14 @@ public class SammakkoKadulla : PhysicsGame
 
 	public void Pyorailija(Image pyorailijanKuva, double x, double y,double leveys, double korkeus)
 	{
-		PhysicsObject pyrorailija = new PhysicsObject (leveys, korkeus, Shape.FromImage(pyorailijanKuva));
+		pyrorailija = new PhysicsObject (leveys, korkeus, Shape.FromImage(pyorailijanKuva));
 		pyrorailija.Image = pyorailijanKuva;
 		pyrorailija.Tag = "pyorailija";
 		pyrorailija.X = x;
 		pyrorailija.Y = y;
 		Vector pyoraNopeus = new Vector (100, 0);
 		pyrorailija.Hit(pyoraNopeus);
+		pyrorailija.MakeStatic ();
 		Add (pyrorailija);
 	}
 
@@ -245,13 +254,14 @@ public class SammakkoKadulla : PhysicsGame
 		int rndPyorat = RandomGen.NextInt (1, 15);
 		double rndY = RandomGen.NextDouble (-170, -250);
 		Pyorailija (pyorailijatKuva[rndPyorat], -450, rndY, 40, 20);
+
 	}
 
 
 	public void PyoraAjastin()
 	{
 		Timer ajastin = new Timer ();
-		ajastin.Interval = 0.4;   // tällä voit myös säätää nopeutta
+		ajastin.Interval = 1;   // tällä voit myös säätää nopeutta
 		ajastin.Timeout += LuoPyorailijat;
 		ajastin.Start();
 	}
@@ -259,23 +269,32 @@ public class SammakkoKadulla : PhysicsGame
 
 	public void LuoAikaLaskuri()
 	{
-		aikaMittari = new DoubleMeter(10);
-		aikaMittari.MaxValue = 10;
+		aikaMittari = new DoubleMeter(60);
+		aikaMittari.MaxValue = 60;
 
 		aikaLaskuri = new Timer();
 		aikaLaskuri.Interval = 0.1;
 		aikaLaskuri.Timeout += LaskeAlaspain;
 		aikaLaskuri.Start();
 
-		ProgressBar aikaPalkki = new ProgressBar(150, 20);
-		aikaPalkki.X = Screen.Left + 250;
-		aikaPalkki.Y = Screen.Top - 40;
+		ProgressBar aikaPalkki = new ProgressBar(400, 10);
+		aikaPalkki.X = Screen.Left + 230;
+		aikaPalkki.Y = Screen.Top - 60;
 		aikaPalkki.Color = Color.Transparent;
 		aikaPalkki.BarColor = Color.Red;
 		aikaPalkki.BorderColor = Color.Black;
 		aikaPalkki.BindTo (aikaMittari);
 		Add(aikaPalkki);
+
+		Label aikaTeksti = new Label();
+		aikaTeksti.TextColor = Color.Wheat;
+		aikaTeksti.Color = Color.Transparent;
+		aikaTeksti.Text = "Jäljellä oleva aika: ";
+		aikaTeksti.X = Screen.Left + 120;
+		aikaTeksti.Y = Screen.Top - 40;
+		Add (aikaTeksti);
 	}
+
 
 	public void LaskeAlaspain()
 	{
@@ -289,5 +308,29 @@ public class SammakkoKadulla : PhysicsGame
 		}
 	}
 
+	public void PelaajaOsuu(PhysicsObject pelaaja, PhysicsObject kohde)
+	{
+		kohde.Destroy ();
+	}
+
+	public List<Label> LuoPelaajanElamaSydamet(double x, double y,double leveys, double korkeus)
+	{
+		int vali = 0;
+		for (int i = 1; i <= sydamet.Capacity; i++) 
+		{
+			Label sydan = new Label ();
+			sydan.Image = elamaSydan;
+			sydan.X = x + vali;
+			sydan.Y = y;
+			sydan.Width = leveys;
+			sydan.Height = korkeus;
+			Add (sydan);
+			sydamet.Add (sydan);
+			vali += 30;
+		}
+			
+		return sydamet;
+	}
+		
 }
 
