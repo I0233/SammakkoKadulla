@@ -16,7 +16,7 @@ public class SammakkoKadulla : PhysicsGame
 	#region Pelin muuttujat
 	Image taustaKuva; //Taustakuvaa varten 
 	Image sammakonKuva;
-	Image[] pyorailjienKuva;
+	Image[] pyorailijatKuva;
 	Image[] sammakkoAnimKuvat;
 	Image[] poliisiAutoAnim;
 	Image pensasVaaleaKuva;
@@ -54,12 +54,13 @@ public class SammakkoKadulla : PhysicsGame
 		}
 		LuoSammakko(paikka,60,60);
 		LuoAikaLaskuri ();
+		PyoraAjastin ();
 		Camera.ZoomFactor = 1.2;
 		Camera.StayInLevel = true;
 		Camera.Follow(sammakko);
 		kulma = new Angle ();
 		MessageDisplay.Add( "Nappaa kärppästä!!" );
-		SetWindowSize (1500, 750);
+		SetWindowSize (1000, 750);
 	}
 	#endregion
 
@@ -68,10 +69,11 @@ public class SammakkoKadulla : PhysicsGame
 	{
         taustaKuva = LoadImage ("Tausta");
 		sammakonKuva = LoadImage ("Sammakko/sammakko_0");
-		pyorailjienKuva = LoadImages (
+		pyorailijatKuva = LoadImages (
 			"Pyorailijat/Pyora1",
 			"Pyorailijat/Pyora2",
 			"Pyorailijat/Pyora3",
+			"Pyorailijat/Pyora4",
 			"Pyorailijat/Pyora5",
 			"Pyorailijat/Pyora6",
 			"Pyorailijat/Pyora7",
@@ -232,13 +234,17 @@ public class SammakkoKadulla : PhysicsGame
 		pyrorailija.Tag = "pyorailija";
 		pyrorailija.X = x;
 		pyrorailija.Y = y;
+		Vector pyoraNopeus = new Vector (100, 0);
+		pyrorailija.Hit(pyoraNopeus);
 		Add (pyrorailija);
 	}
 
 
 	public void LuoPyorailijat()
 	{
-		Pyorailija (pyorailjienKuva[1], -400, -250, 40, 40);
+		int rndPyorat = RandomGen.NextInt (1, 15);
+		double rndY = RandomGen.NextDouble (-170, -250);
+		Pyorailija (pyorailijatKuva[rndPyorat], -450, rndY, 40, 20);
 	}
 
 
@@ -249,6 +255,8 @@ public class SammakkoKadulla : PhysicsGame
 		ajastin.Timeout += LuoPyorailijat;
 		ajastin.Start();
 	}
+
+
 	public void LuoAikaLaskuri()
 	{
 		aikaMittari = new DoubleMeter(10);
@@ -260,8 +268,8 @@ public class SammakkoKadulla : PhysicsGame
 		aikaLaskuri.Start();
 
 		ProgressBar aikaPalkki = new ProgressBar(150, 20);
-		aikaPalkki.X = Screen.Left + 150;
-		aikaPalkki.Y = Screen.Top - 20;
+		aikaPalkki.X = Screen.Left + 250;
+		aikaPalkki.Y = Screen.Top - 40;
 		aikaPalkki.Color = Color.Transparent;
 		aikaPalkki.BarColor = Color.Red;
 		aikaPalkki.BorderColor = Color.Black;
@@ -277,7 +285,6 @@ public class SammakkoKadulla : PhysicsGame
 		{
 			MessageDisplay.Add("Aika loppui...");
 			aikaLaskuri.Stop();
-			ConfirmExit ();
 
 		}
 	}
