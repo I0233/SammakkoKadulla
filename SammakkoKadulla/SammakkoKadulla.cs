@@ -5,6 +5,7 @@ using Jypeli.Controls;
 using Jypeli.Widgets;
 using Jypeli.Effects;
 using Jypeli.Assets;
+using Jypeli.GameObjects;
 
 /// @author: Ali Nadhum
 /// @version: 0.1
@@ -21,20 +22,22 @@ public class SammakkoKadulla : PhysicsGame
 	Image elamaSydan;
 	Image[] pyorailijatKuva;
 	Image[] autotKuva;
+	Image poliisiAutoKuva;
 	Image[] sammakkoAnimKuvat;
-	Image[] poliisiAutoAnim;
+	Image[] poliisiAutoAnimKuvat;
 	Image pensasVaaleaKuva;
 	Image pensasTummaKuva;
-	private double LiikkumisNopeus = 800;
-	private double loikkimisNopeus = 400; 
-	PlatformCharacter sammakko; //Sammakon hahmo
+	private double loikkimisNopeus = 200; 
+	PhysicsObject sammakko; //Sammakon hahmo
 	Vector paikka;
 	PhysicsObject pensasVaalea;
 	PhysicsObject pensasTumma;
-	PhysicsObject pyrorailija;
+	PhysicsObject pyorailija;
 	PhysicsObject auto;
+	PhysicsObject poliisiAuto;
 	PhysicsObject vasenReuna;
 	PhysicsObject oikeaReuna;
+	PhysicsObject jarvi;
 	private bool flipped = false;
 	Angle kulma;
 	DoubleMeter	aikaMittari;
@@ -64,16 +67,17 @@ public class SammakkoKadulla : PhysicsGame
 			}
 			x += 120;
 		}
-		LuoSammakko(paikka, 60, 60);
+		LuoJarvi (0, Screen.Top - 143, Screen.Width, 180);
 		LuoAikaLaskuri ();
 		LuoPelaajanElamaSydamet (Screen.Right - 150, Screen.Top - 40, 25, 25);
 		PyoraAjastin ();
-		AutoAjastin ();
+		AutotAjastin ();
 		Camera.ZoomFactor = 1.2;
 		Camera.StayInLevel = true;
+		LuoSammakko(paikka, 60, 60);
 		Camera.Follow(sammakko);
 		kulma = new Angle ();
-		SetWindowSize(1024, 768, false); 
+		SetWindowSize(1024, 768, false);
 	}
 	#endregion
 
@@ -107,6 +111,7 @@ public class SammakkoKadulla : PhysicsGame
 			"Autot/SinAuto",
 			"Autot/Poliisi1.1"
 		);
+		poliisiAutoKuva = LoadImage ("Autot/Poliisi1.1");
 		sammakkoAnimKuvat = LoadImages(
 			"Sammakko/sammakko_0", 
 			"Sammakko/sammakko_1", 
@@ -116,9 +121,9 @@ public class SammakkoKadulla : PhysicsGame
 			"Sammakko/sammakko_5", 
 			"Sammakko/sammakko_6"
 		);
-		poliisiAutoAnim = LoadImages (
+		poliisiAutoAnimKuvat = LoadImages (
 			"Autot/Poliisi1.1",
-			"Autot/Pollisi1.2",
+			"Autot/Poliisi1.2",
 			"Autot/Poliisi1.3",
 			"Autot/Poliisi1.2"
 		);
@@ -141,10 +146,11 @@ public class SammakkoKadulla : PhysicsGame
 	#region Sammakon logiikka
 	public void LuoSammakko(Vector paikka, double leveys, double korkeus)
 	{
-		sammakko = new PlatformCharacter(leveys, korkeus);
+		sammakko = new PhysicsObject(leveys, korkeus, Shape.FromImage(sammakonKuva));
 		sammakko.Image = sammakonKuva;
 		sammakko.Position = paikka;
-		sammakko.SizingByLayout = true;
+		sammakko.CanRotate = false;
+		sammakko.Tag = "sammakko";
 		Add(sammakko);
 		LiikutaSammakko ();
 	}
@@ -153,18 +159,19 @@ public class SammakkoKadulla : PhysicsGame
 	public void LiikutaSammakko ()
 	{
 		Keyboard.Listen( Key.Up, ButtonState.Pressed, LoikiYlos, null, sammakko, loikkimisNopeus);
-		Keyboard.Listen( Key.Down, ButtonState.Pressed, LoikiAlas, null, sammakko, -loikkimisNopeus );
+		Keyboard.Listen( Key.Down, ButtonState.Pressed, LoikiAlas, null, sammakko, loikkimisNopeus );
 		Keyboard.Listen( Key.Up, ButtonState.Released, sammakko.StopVertical, null );
 		Keyboard.Listen( Key.Down, ButtonState.Released,sammakko.StopVertical , null );
-		Keyboard.Listen( Key.Left, ButtonState.Pressed, LiikutaVasemmalle, null, sammakko, -LiikkumisNopeus );
-		Keyboard.Listen( Key.Right, ButtonState.Pressed, LiikutaOikealle, null, sammakko, LiikkumisNopeus );
+		Keyboard.Listen( Key.Left, ButtonState.Pressed, LiikutaVasemmalle, null, sammakko, loikkimisNopeus );
+		Keyboard.Listen( Key.Right, ButtonState.Pressed, LiikutaOikealle, null, sammakko, loikkimisNopeus );
 		Keyboard.Listen( Key.Left, ButtonState.Released, sammakko.StopHorizontal, null);
 		Keyboard.Listen( Key.Right, ButtonState.Released, sammakko.StopHorizontal, null );
 		AddCollisionHandler(sammakko, "pyorailija", SammakkoOsuu);
+		AddCollisionHandler(jarvi, "sammakko", SammakkoOsuu);
 	}
 
 
-	void LiikutaVasemmalle( PlatformCharacter hahmo, double nopeus)
+	void LiikutaVasemmalle( PhysicsObject hahmo, double nopeus)
 	{
 		if (kulma.Degrees == 0)
 		{
@@ -176,12 +183,12 @@ public class SammakkoKadulla : PhysicsGame
 			kulma.Degrees = -90;
 		}
 		hahmo.Angle = kulma;
-		hahmo.Walk (nopeus);
+		hahmo.Move(new Vector(-nopeus, 0)); 
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
 
-	void LiikutaOikealle( PlatformCharacter hahmo, double nopeus)
+	void LiikutaOikealle( PhysicsObject hahmo, double nopeus)
 	{
 		if (kulma.Degrees == 0) 
 		{
@@ -192,16 +199,16 @@ public class SammakkoKadulla : PhysicsGame
 			kulma.Degrees = 90;
 		}
 		hahmo.Angle = kulma;
-		hahmo.Walk (nopeus);
+		hahmo.Move(new Vector(nopeus, 0));
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
 
-	public void LoikiYlos(PlatformCharacter hahmo, double nopeus)
+	public void LoikiYlos(PhysicsObject hahmo, double nopeus)
 	{
 		kulma.Degrees = 0;
 		hahmo.Angle = kulma;
-		hahmo.ForceJump (nopeus);
+		hahmo.Move(new Vector(0, nopeus));
 		if (flipped) {
 			hahmo.FlipImage ();
 			flipped = false;
@@ -210,9 +217,9 @@ public class SammakkoKadulla : PhysicsGame
 	}
 
 
-	public void LoikiAlas(PlatformCharacter hahmo, double nopeus)
+	public void LoikiAlas(PhysicsObject hahmo, double nopeus)
 	{
-		hahmo.ForceJump (nopeus);
+		hahmo.Move(new Vector(0, -nopeus));
 		kulma.Degrees = 1;
 		hahmo.Angle = kulma;
 		if (!flipped) {
@@ -235,11 +242,11 @@ public class SammakkoKadulla : PhysicsGame
 
 	public void SammakkoOsuu(PhysicsObject sammakko, PhysicsObject kohde)
 	{
-		kohde.Destroy ();
 		for(int i = 0; i < sydamet.Count; i++) 
 		{
 			sydamet.RemoveRange (i, 1);
 		}
+		kohde.Destroy ();
 	}
 	#endregion
 
@@ -266,26 +273,27 @@ public class SammakkoKadulla : PhysicsGame
 	#region Pyorailijat funktiot
 	public void Pyorailija(Image pyorailijanKuva, double x, double y,double leveys, double korkeus, Vector pyoranSuunta)
 	{
-		pyrorailija = new PhysicsObject (leveys, korkeus, Shape.FromImage(pyorailijanKuva));
-		pyrorailija.Image = pyorailijanKuva;
-		pyrorailija.Tag = "pyorailija";
-		pyrorailija.X = x;
-		pyrorailija.Y = y;
-		pyrorailija.Hit(pyoranSuunta);
-		pyrorailija.MakeStatic ();
-		Add (pyrorailija);
+		pyorailija = new PhysicsObject (leveys, korkeus, Shape.FromImage(pyorailijanKuva));
+		pyorailija.Image = pyorailijanKuva;
+		pyorailija.Tag = "pyorailija";
+		pyorailija.Mass = 1;
+		pyorailija.X = x;
+		pyorailija.Y = y;
+		pyorailija.Hit(pyoranSuunta);
+		pyorailija.MakeStatic ();
+		Add (pyorailija);
 	}
 
 
 	public void LuoPyorailijat()
 	{
-		int rndPyorat1 = RandomGen.NextInt (1, 15);
-		int rndPyorat2 = RandomGen.NextInt (1, 15);
+		int rndPyorat1 = RandomGen.NextInt (0, 15);
+		int rndPyorat2 = RandomGen.NextInt (0, 15);
 		double rndY1 = RandomGen.NextDouble (-160, -190);
 		double rndY2 = RandomGen.NextDouble (-200, -250);
 		Pyorailija (pyorailijatKuva[rndPyorat1], -450, rndY1, 40, 20, new Vector(100,0));
 		Pyorailija (Image.Mirror(pyorailijatKuva[rndPyorat2]), 450, rndY2, 40, 20, new Vector(-100,0));
-		AddCollisionHandler(pyrorailija, ObjektiOsuuSeinaan);
+		AddCollisionHandler(pyorailija, ObjektiOsuuSeinaan);
 
 	}
 
@@ -304,7 +312,7 @@ public class SammakkoKadulla : PhysicsGame
 	{
 		auto = new PhysicsObject (leveys, korkeus, Shape.FromImage(autoKuva));
 		auto.Image = autoKuva;
-		auto.Tag = "pyorailija";
+		auto.Tag = "auto";
 		auto.X = x;
 		auto.Y = y;
 		auto.Hit(autonSuunta);
@@ -315,24 +323,73 @@ public class SammakkoKadulla : PhysicsGame
 
 	public void Luoautot()
 	{
-		int rndAuto1 = RandomGen.NextInt (1, 6);
-		int rndAuto2 = RandomGen.NextInt (1, 6);
+		int rndAuto1 = RandomGen.NextInt (0, 6);
+		int rndAuto2 = RandomGen.NextInt (0, 6);
 		Auto (autotKuva[rndAuto1], -450, 45, 50, 30, new Vector(100,0));
 		Auto (Image.Mirror(autotKuva[rndAuto2]), 450, -50, 50, 30, new Vector(-100,0));
 		AddCollisionHandler(auto, ObjektiOsuuSeinaan);
+		MediaPlayer.Play ("Audio/CityTraffic");
 
 	}
-
-	public void AutoAjastin()
+		
+	public void PoliisiAuto(Image[] poliisiAutoAnimKuvat, double x, double y,double leveys, double korkeus, Vector autonSuunta)
 	{
-		Timer ajastin = new Timer ();
-		ajastin.Interval = 3;   // tällä voit myös säätää nopeutta
-		ajastin.Timeout += Luoautot;
-		ajastin.Start();
+		poliisiAuto = new PhysicsObject (leveys, korkeus, Shape.FromImage(poliisiAutoKuva));
+		poliisiAuto.Tag = "auto";
+		poliisiAuto.X = x;
+		poliisiAuto.Y = y;
+		Animation poliisiAutoAnim = new Animation (poliisiAutoAnimKuvat);
+		poliisiAutoAnim.FPS = 40;
+		poliisiAuto.Animation = poliisiAutoAnim;
+		poliisiAutoAnim.Start ();
+		poliisiAuto.Hit(autonSuunta);
+		poliisiAuto.MakeStatic ();
+		MediaPlayer.Play("Audio/PoliisiSireeni");
+		Add (poliisiAuto);
 	}
 
+
+	public void LuoPoliisiAuto(){
+		PoliisiAuto (poliisiAutoAnimKuvat, -450, 0, 50, 30, new Vector (150, 0));
+		PoliisiAuto (Image.Mirror(poliisiAutoAnimKuvat), 450, 0, 50, 30, new Vector (-150, 0));
+		AddCollisionHandler(poliisiAuto, ObjektiOsuuSeinaan);
+	}
+
+
+	public void AutotAjastin()
+	{
+		Timer autoAjastin = new Timer ();
+		autoAjastin.Interval = 3;   // tällä voit myös säätää nopeutta
+		autoAjastin.Timeout += Luoautot;
+		autoAjastin.Start();
+
+		// Poliisi auto ajastin
+		Timer poliisiAutoAjastin =  new Timer();
+		poliisiAutoAjastin.Interval = 20;
+		poliisiAutoAjastin.Timeout += LuoPoliisiAuto;
+		poliisiAutoAjastin.Start ();
+	}
+		
 	#endregion
 
+	#region Jarvi
+	public void LuoJarvi(double x, double y,double leveys, double korkeus)
+	{
+		jarvi = new PhysicsObject (leveys, korkeus);
+		jarvi.Color = Color.Aqua;
+		jarvi.Tag = "järvi";
+		jarvi.X = x;
+		jarvi.Y = y;
+		jarvi.Width = leveys;
+		jarvi.Height = korkeus;
+		Add (jarvi);
+
+	}
+	#endregion
+
+	#region Tukit
+		
+	#endregion
 
 
 	public void ObjektiOsuuSeinaan(PhysicsObject objekti, PhysicsObject seina){
