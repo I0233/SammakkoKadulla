@@ -19,7 +19,6 @@ public class SammakkoKadulla : PhysicsGame
 	#region Pelin muuttujat
 	Image taustaKuva; //Taustakuvaa varten 
 	Image sammakonKuva;
-	Image elamaSydan;
 	Image[] pyorailijatKuva;
 	Image[] autotKuva;
 	Image[] sammakkoAnimKuvat;
@@ -27,22 +26,27 @@ public class SammakkoKadulla : PhysicsGame
 	Image pensasVaaleaKuva;
 	Image pensasTummaKuva;
 	Image [] kotkaKuvat;
+	Image [] karpanenKuvat;
 	PhysicsObject sammakko; //Sammakon hahmo
 	PhysicsObject auto;
 	PhysicsObject pyorailija;
 	PhysicsObject poliisiAuto;
-	PhysicsObject jarvi;
 	PhysicsObject kotka;
+	PhysicsObject karpanen;
 	PhysicsObject vasenReuna;
 	PhysicsObject oikeaReuna;
-	private double loikkimisNopeus = 200; 
-	private bool flipped = false;
 	Angle kulma = new Angle ();
 	DoubleMeter	aikaMittari;
 	Timer aikaLaskuri;
-	int sydanMaara = 5;
 	SoundEffect hyppyAani = LoadSoundEffect("Audio/hyppy_aani.wav");
+	SoundEffect kotkaAani = LoadSoundEffect("Audio/kotkaAani.wav");
+	SoundEffect poliisiSireeni = LoadSoundEffect("Audio/poliisiSireeni.wav");
+	SoundEffect karpanenAani = LoadSoundEffect("Audio/karpanenAani.wav");
 	bool poliisiAutoVasemmalta = false;
+	double loikkimisNopeus = 200; 
+	bool flipped = false;
+	int sydanMaara = 3;
+	Widget sydamet;
 	#endregion
 
 	#region Pelin alustaminen
@@ -65,16 +69,22 @@ public class SammakkoKadulla : PhysicsGame
 			}
 			x += 120;
 		}
-		LuoAikaLaskuri ();
+		LuoPeliAika ();
 		LuoSammakonSydamet (Screen.Right - 150, Screen.Top - 40, 25, 25, sydanMaara);
 		peliAjastin ();
 		Camera.ZoomFactor = 1.2;
 		Camera.StayInLevel = true;
 		LuoSammakko(new Vector (0, -350), 60, 60);
+		LuoKarpanen ();
 		Camera.Follow(sammakko);
 		SetWindowSize(1024, 768, false);
 		MediaPlayer.Play ("Audio/CityTraffic");
 		MediaPlayer.IsRepeating = true;
+	}
+
+	protected override void Update (Time time)
+	{
+		base.Update (time);
 	}
 	#endregion
 
@@ -125,7 +135,6 @@ public class SammakkoKadulla : PhysicsGame
 		);
 		pensasVaaleaKuva = LoadImage ("Pensaat/Pensas1");
 		pensasTummaKuva = LoadImage ("Pensaat/Pensas2");
-		elamaSydan = LoadImage ("Elama");
 		kotkaKuvat = LoadImages (
 			"Kotka/Kotka",
 			"Kotka/Kotka1",
@@ -135,6 +144,10 @@ public class SammakkoKadulla : PhysicsGame
 			"Kotka/Kotka5",
 			"Kotka/Kotka6",
 			"Kotka/Kotka7"
+		);
+		karpanenKuvat = LoadImages (
+			"Karpanen/Karpanen1",
+			"Karpanen/Karpanen2"
 		);
 	}
 	#endregion
@@ -155,10 +168,8 @@ public class SammakkoKadulla : PhysicsGame
 		sammakko = new PhysicsObject(leveys, korkeus, Shape.FromImage(sammakonKuva));
 		sammakko.Image = sammakonKuva;
 		sammakko.Position = paikka;
-		sammakko.Mass = 1000000;
 		sammakko.CanRotate = false;
 		sammakko.Tag = "sammakko";
-		sammakko.CollisionIgnoreGroup = 2;
 		Add(sammakko);
 		LiikutaSammakko ();
 	}
@@ -176,6 +187,7 @@ public class SammakkoKadulla : PhysicsGame
 		Keyboard.Listen( Key.Right, ButtonState.Released, sammakko.StopHorizontal, null );
 		AddCollisionHandler(sammakko, "pyorailija", SammakkoOsuu);
 		AddCollisionHandler(sammakko, "auto", SammakkoOsuu);
+		AddCollisionHandler(sammakko, "kotka", SammakkoOsuu);
 	}
 
 
@@ -254,22 +266,36 @@ public class SammakkoKadulla : PhysicsGame
 
 	public void LuoSammakonSydamet(double x, double y,double leveys, double korkeus, int sydanMaara)
 	{
-		int vali = 0;
-		for (int i = 0; i < sydanMaara; i++) 
+		HorizontalLayout asettelu = new HorizontalLayout();
+		asettelu.Spacing = 10;
+
+		sydamet = new Widget( asettelu );
+		sydamet.Color = Color.Transparent;
+		sydamet.X = Screen.Center.X + 450;
+		sydamet.Y = Screen.Top - 60;
+		Add( sydamet );
+
+		for ( int i = 0; i < sydanMaara; i++ )
 		{
-			Label sydan = new Label (leveys, korkeus);
-			sydan.Image = elamaSydan;
-			sydan.X = x + vali;
-			sydan.Y = y;
-			Add (sydan);
-			vali += 30;
+			Widget sydan = new Widget( 20, 20, Shape.Heart );
+			sydan.Color = Color.Red;
+			sydamet.Add( sydan );
 		}
 	}
 
 	public void SammakkoOsuu(PhysicsObject sammakko, PhysicsObject kohde)
 	{
+		sydamet.Destroy ();
 		sydanMaara--;
-		LuoSammakonSydamet (Screen.Right - 150, Screen.Top - 40, 25, 25, sydanMaara);
+		if (sydanMaara <= 0) {
+			MessageDisplay msg = new MessageDisplay ();
+			msg.BorderColor = Color.Black;
+			msg.Color = Color.Red;
+			msg.Add ("You Lost !!");
+			IsPaused = true;
+		} else {
+			LuoSammakonSydamet (Screen.Right - 150, Screen.Top - 40, 25, 25, sydanMaara);
+		}
 		kohde.Destroy ();
 	}
 	#endregion
@@ -358,7 +384,7 @@ public class SammakkoKadulla : PhysicsGame
 	{
 		Image poliisiAutoKuva = LoadImage ("Autot/Poliisi1.1");
 		poliisiAuto = new PhysicsObject (leveys, korkeus, Shape.FromImage(poliisiAutoKuva));
-		poliisiAuto.Tag = "auto";
+		poliisiAuto.Tag = "poliisiAuto";
 		poliisiAuto.X = x;
 		poliisiAuto.Y = y;
 		Animation poliisiAutoAnim = new Animation (poliisiAutoAnimKuvat);
@@ -383,26 +409,11 @@ public class SammakkoKadulla : PhysicsGame
 	}
 	#endregion
 
-	#region Jarvi
-	public void LuoJarvi(double x, double y,double leveys, double korkeus)
-	{
-		jarvi = new PhysicsObject (leveys, korkeus);
-		jarvi.IsVisible = false;
-		jarvi.Tag = "jarvi";
-		jarvi.CollisionIgnoreGroup = 1;
-		jarvi.X = x;
-		jarvi.Y = y;
-		Add (jarvi, -1);
-	}
-	#endregion
-
 	#region Kotkan logiikka
 	public void Kotka(Image[] kotkaKuvat, double x, double y, double leveys, double korkeus, Vector kotkanSuunta)
 	{
-		Image kotkaKuva = LoadImage ("Kotka/Kotka");
-		kotka = new PhysicsObject (leveys, korkeus, Shape.FromImage(kotkaKuva));
+		kotka = new PhysicsObject (leveys, korkeus);
 		kotka.Tag = "kotka";
-		kotka.CollisionIgnoreGroup = 1;
 		kotka.X = x;
 		kotka.Y = y;
 		Animation kotkanAnim = new Animation (kotkaKuvat);
@@ -423,6 +434,26 @@ public class SammakkoKadulla : PhysicsGame
 	}
 	#endregion
 
+	#region Karpasen logiikka
+	public void Karpanen(Image[] karpanenKuvat, double x, double y, double leveys, double korkeus, Vector karpanenSuunta){
+		karpanen = new PhysicsObject (leveys, korkeus);
+		karpanen.Tag = "karpanen";
+		karpanen.X = x;
+		karpanen.Y = y;
+		Animation karpasenAnim = new Animation (karpanenKuvat);
+		karpasenAnim.FPS = 15;
+		karpanen.Animation =  karpasenAnim;
+		karpasenAnim.Start ();
+		karpanen.Hit(karpanenSuunta);
+		karpanen.MakeStatic ();
+		Add (karpanen);
+	}
+
+	public void LuoKarpanen(){
+		double rndY = RandomGen.NextDouble (Screen.Top - 18, Screen.Top - 22);
+		Karpanen (karpanenKuvat, Screen.Center.X + 100, rndY, 100, 100, new Vector (-10, 0));
+	}
+	#endregion
 
 	public void ObjektiOsuuSeinaan(PhysicsObject objekti, PhysicsObject seina){
 		if(seina == vasenReuna || seina == oikeaReuna)
@@ -431,15 +462,10 @@ public class SammakkoKadulla : PhysicsGame
 		}
 	}
 
-	public void LuoAikaLaskuri()
+	public void LuoPeliAika()
 	{
 		aikaMittari = new DoubleMeter(60);
 		aikaMittari.MaxValue = 60;
-
-		aikaLaskuri = new Timer();
-		aikaLaskuri.Interval = 0.1;
-		aikaLaskuri.Timeout += LaskeAlaspain;
-		aikaLaskuri.Start();
 
 		ProgressBar aikaPalkki = new ProgressBar(400, 10);
 		aikaPalkki.X = Screen.Left + 230;
@@ -463,6 +489,12 @@ public class SammakkoKadulla : PhysicsGame
 
 	public void peliAjastin()
 	{
+		// Pelin ajastin
+		aikaLaskuri = new Timer();
+		aikaLaskuri.Interval = 0.1;
+		aikaLaskuri.Timeout += LaskeAlaspain;
+		aikaLaskuri.Start();
+
 		// Autojen ajastin
 		Timer autoAjastin = new Timer ();
 		autoAjastin.Interval = 3;   // tällä voit myös säätää nopeutta
@@ -472,7 +504,10 @@ public class SammakkoKadulla : PhysicsGame
 		// Poliisi auto ajastin
 		Timer poliisiAutoAjastin =  new Timer();
 		poliisiAutoAjastin.Interval = 20;
-		poliisiAutoAjastin.Timeout += LuoPoliisiAuto;
+		poliisiAutoAjastin.Timeout += delegate() {
+			LuoPoliisiAuto();
+			poliisiSireeni.Play();
+		};
 		poliisiAutoAjastin.Start ();
 
 		//Pyörien ajastin 
@@ -481,11 +516,18 @@ public class SammakkoKadulla : PhysicsGame
 		pyoraAjastin.Timeout += LuoPyorailijat;
 		pyoraAjastin.Start();
 
-		// Tukkien ajastin 
-		Timer tukkiAjastin = new Timer ();
-		tukkiAjastin.Interval = 5;
-		tukkiAjastin.Timeout += LuoKotka;
-		tukkiAjastin.Start ();
+		// Kotkan ajastin 
+		Timer kotkaAjastin = new Timer ();
+		kotkaAjastin.Interval = 5;
+		kotkaAjastin.Timeout += LuoKotka;
+		kotkaAjastin.Start ();
+
+		Timer kotkaAaniAjastin = new Timer ();
+		kotkaAaniAjastin.Interval = 15;
+		kotkaAaniAjastin.Timeout += delegate() {
+			kotkaAani.Play ();
+		};
+			kotkaAaniAjastin.Start();
 	}
 
 	#endregion
