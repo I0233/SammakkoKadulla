@@ -42,6 +42,7 @@ public class SammakkoKadulla : PhysicsGame
 	SoundEffect kotkaAani = LoadSoundEffect("Audio/kotkaAani.wav");
 	SoundEffect poliisiSireeni = LoadSoundEffect("Audio/poliisiSireeni.wav");
 	SoundEffect karpanenAani = LoadSoundEffect("Audio/karpanenAani.wav");
+	SoundEffect sammakkoOsuma = LoadSoundEffect("Audio/SammakkoOsuma.wav");
 	bool poliisiAutoVasemmalta = false;
 	double loikkimisNopeus = 200; 
 	bool flipped = false;
@@ -84,6 +85,11 @@ public class SammakkoKadulla : PhysicsGame
 
 	protected override void Update (Time time)
 	{
+		if (sammakko.Y > Screen.Center.Y + 120) {
+			MediaPlayer.Volume = 0.3;
+		} else if (sammakko.Y < Screen.Center.Y + 120) {
+			MediaPlayer.Volume = 1.0;
+		}
 		base.Update (time);
 	}
 	#endregion
@@ -188,6 +194,7 @@ public class SammakkoKadulla : PhysicsGame
 		AddCollisionHandler(sammakko, "pyorailija", SammakkoOsuu);
 		AddCollisionHandler(sammakko, "auto", SammakkoOsuu);
 		AddCollisionHandler(sammakko, "kotka", SammakkoOsuu);
+		AddCollisionHandler(sammakko, "poliisiAuto", SammakkoOsuu);
 	}
 
 
@@ -204,7 +211,7 @@ public class SammakkoKadulla : PhysicsGame
 		}
 		hahmo.Angle = kulma;
 		hahmo.Move(new Vector(-nopeus, 0)); 
-		hyppyAani.Play ();
+		hyppyAani.Play (0.4, 0, 0);
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
@@ -221,7 +228,7 @@ public class SammakkoKadulla : PhysicsGame
 		}
 		hahmo.Angle = kulma;
 		hahmo.Move(new Vector(nopeus, 0));
-		hyppyAani.Play ();
+		hyppyAani.Play (0.4, 0, 0);
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
@@ -235,7 +242,7 @@ public class SammakkoKadulla : PhysicsGame
 			flipped = false;
 		}
 		hahmo.Move(new Vector(0, nopeus));
-		hyppyAani.Play ();
+		hyppyAani.Play (0.4, 0, 0);
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
@@ -249,7 +256,7 @@ public class SammakkoKadulla : PhysicsGame
 			flipped = true;
 		}
 		hahmo.Move(new Vector(0, -nopeus));
-		hyppyAani.Play ();
+		hyppyAani.Play (0.4, 0, 0);
 		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
 	}
 
@@ -295,6 +302,10 @@ public class SammakkoKadulla : PhysicsGame
 			IsPaused = true;
 		} else {
 			LuoSammakonSydamet (Screen.Right - 150, Screen.Top - 40, 25, 25, sydanMaara);
+		}
+		sammakkoOsuma.Play ();
+		if (kohde.Tag.ToString() == "poliisiAuto") {
+			poliisiSireeni.Stop ();
 		}
 		kohde.Destroy ();
 	}
@@ -382,8 +393,7 @@ public class SammakkoKadulla : PhysicsGame
 		
 	public void PoliisiAuto(Image[] poliisiAutoAnimKuvat, double x, double y,double leveys, double korkeus, Vector autonSuunta)
 	{
-		Image poliisiAutoKuva = LoadImage ("Autot/Poliisi1.1");
-		poliisiAuto = new PhysicsObject (leveys, korkeus, Shape.FromImage(poliisiAutoKuva));
+		poliisiAuto = new PhysicsObject (leveys, korkeus, Shape.FromImage(poliisiAutoAnimKuvat[0]));
 		poliisiAuto.Tag = "poliisiAuto";
 		poliisiAuto.X = x;
 		poliisiAuto.Y = y;
@@ -436,7 +446,7 @@ public class SammakkoKadulla : PhysicsGame
 
 	#region Karpasen logiikka
 	public void Karpanen(Image[] karpanenKuvat, double x, double y, double leveys, double korkeus, Vector karpanenSuunta){
-		karpanen = new PhysicsObject (leveys, korkeus);
+		karpanen = new PhysicsObject (leveys, korkeus, Shape.FromImage(karpanenKuvat[0]));
 		karpanen.Tag = "karpanen";
 		karpanen.X = x;
 		karpanen.Y = y;
@@ -445,12 +455,12 @@ public class SammakkoKadulla : PhysicsGame
 		karpanen.Animation =  karpasenAnim;
 		karpasenAnim.Start ();
 		karpanen.Hit(karpanenSuunta);
-		karpanen.MakeStatic ();
 		Add (karpanen);
 	}
 
 	public void LuoKarpanen(){
 		double rndY = RandomGen.NextDouble (Screen.Top - 18, Screen.Top - 22);
+		karpanenAani.Play ();
 		Karpanen (karpanenKuvat, Screen.Center.X + 100, rndY, 100, 100, new Vector (-10, 0));
 	}
 	#endregion
@@ -528,8 +538,14 @@ public class SammakkoKadulla : PhysicsGame
 			kotkaAani.Play ();
 		};
 			kotkaAaniAjastin.Start();
-	}
 
+		Timer karpanenAaniAjastin = new Timer ();
+		karpanenAaniAjastin.Interval = 2;
+		karpanenAaniAjastin.Timeout += delegate() {
+			karpanenAani.Play();
+		};
+		karpanenAaniAjastin.Start ();
+	}
 	#endregion
 
 	#region Pelin aika 
