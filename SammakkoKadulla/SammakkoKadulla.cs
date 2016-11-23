@@ -37,7 +37,6 @@ public class SammakkoKadulla : PhysicsGame
 	PhysicsObject oikeaReuna;
 	Angle kulma = new Angle ();
 	DoubleMeter	aikaMittari;
-	Timer aikaLaskuri;
 	SoundEffect hyppyAani = LoadSoundEffect("Audio/hyppy_aani.wav");
 	SoundEffect kotkaAani = LoadSoundEffect("Audio/kotkaAani.wav");
 	SoundEffect poliisiSireeni = LoadSoundEffect("Audio/poliisiSireeni.wav");
@@ -48,6 +47,7 @@ public class SammakkoKadulla : PhysicsGame
 	bool flipped = false;
 	int sydanMaara = 3;
 	Widget sydamet;
+	Timer aikaLaskuri;
 	#endregion
 
 	#region Pelin alustaminen
@@ -76,11 +76,12 @@ public class SammakkoKadulla : PhysicsGame
 		Camera.ZoomFactor = 1.2;
 		Camera.StayInLevel = true;
 		LuoSammakko(new Vector (0, -350), 60, 60);
-		LuoKarpanen ();
+		Karpanen (karpanenKuvat, Screen.Center.X + 100, Screen.Top - 20, 100, 100, new Vector (-50, 0));
 		Camera.Follow(sammakko);
 		SetWindowSize(1024, 768, false);
 		MediaPlayer.Play ("Audio/CityTraffic");
 		MediaPlayer.IsRepeating = true;
+		karpanenAani.Play ();
 	}
 
 	protected override void Update (Time time)
@@ -456,18 +457,19 @@ public class SammakkoKadulla : PhysicsGame
 		karpasenAnim.Start ();
 		karpanen.Hit(karpanenSuunta);
 		Add (karpanen);
+		AddCollisionHandler (karpanen, ObjektiOsuuSeinaan);
 	}
 
-	public void LuoKarpanen(){
-		double rndY = RandomGen.NextDouble (Screen.Top - 18, Screen.Top - 22);
-		karpanenAani.Play ();
-		Karpanen (karpanenKuvat, Screen.Center.X + 100, rndY, 100, 100, new Vector (-10, 0));
-	}
 	#endregion
 
 	public void ObjektiOsuuSeinaan(PhysicsObject objekti, PhysicsObject seina){
 		if(seina == vasenReuna || seina == oikeaReuna)
 		{
+			if (objekti.Tag.ToString () == "karpanen" && seina == vasenReuna) {
+				Karpanen (Image.Mirror(karpanenKuvat), Screen.Center.X - 400, Screen.Top - 20, 100, 100, new Vector (50, 0));
+			}else if (objekti.Tag.ToString () == "karpanen" && seina == oikeaReuna){
+				Karpanen (karpanenKuvat, Screen.Center.X + 400, Screen.Top - 20, 100, 100, new Vector (-50, 0));
+			}
 			objekti.Destroy ();
 		}
 	}
@@ -545,6 +547,7 @@ public class SammakkoKadulla : PhysicsGame
 			karpanenAani.Play();
 		};
 		karpanenAaniAjastin.Start ();
+
 	}
 	#endregion
 
