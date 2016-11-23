@@ -18,7 +18,9 @@ public class SammakkoKadulla : PhysicsGame
 {
 	#region Pelin muuttujat
 	Image taustaKuva; //Taustakuvaa varten 
-	Image sammakonKuva;
+	Image kuollutSammakko;
+	Image [] sammakonkieliAnimKuvat;
+	Image [] karpanenSuussaAnimKuvat;
 	Image[] pyorailijatKuva;
 	Image[] autotKuva;
 	Image[] sammakkoAnimKuvat;
@@ -42,20 +44,22 @@ public class SammakkoKadulla : PhysicsGame
 	SoundEffect poliisiSireeni = LoadSoundEffect("Audio/poliisiSireeni.wav");
 	SoundEffect karpanenAani = LoadSoundEffect("Audio/karpanenAani.wav");
 	SoundEffect sammakkoOsuma = LoadSoundEffect("Audio/SammakkoOsuma.wav");
+	SoundEffect sammakonNuolaisu = LoadSoundEffect("Audio/sammakonNuolaisu.wav");
 	bool poliisiAutoVasemmalta = false;
 	double loikkimisNopeus = 200; 
 	bool flipped = false;
 	int sydanMaara = 3;
 	Widget sydamet;
 	Timer aikaLaskuri;
+	bool sammakollaOnKarpanen = false;
+	List<Label> valikonKohdat;
 	#endregion
 
 	#region Pelin alustaminen
 	public override void Begin ()
 	{
-
 		Keyboard.Listen(Key.F1, ButtonState.Pressed, ShowControlHelp, "Näytä ohjeet");
-		PhoneBackButton.Listen(ConfirmExit, "Lopeta peli");
+		PhoneBackButton.Listen(ConfirmExit, "Lo sydanMaarapeta peli");
 		Keyboard.Listen(Key.Escape, ButtonState.Pressed, ConfirmExit, "Lopeta peli");
 		LataaKuvat();
 		LuoTaustaKuva(1000, 800);
@@ -76,7 +80,7 @@ public class SammakkoKadulla : PhysicsGame
 		Camera.ZoomFactor = 1.2;
 		Camera.StayInLevel = true;
 		LuoSammakko(new Vector (0, -350), 60, 60);
-		Karpanen (karpanenKuvat, Screen.Center.X + 100, Screen.Top - 20, 100, 100, new Vector (-50, 0));
+		Karpanen (karpanenKuvat, Screen.Center.X + 100, Screen.Top - 20, 70, 70, new Vector (-10, 0));
 		Camera.Follow(sammakko);
 		SetWindowSize(1024, 768, false);
 		MediaPlayer.Play ("Audio/CityTraffic");
@@ -95,11 +99,41 @@ public class SammakkoKadulla : PhysicsGame
 	}
 	#endregion
 
+	void PeliLoppui()
+	{
+		IsPaused = true;
+		valikonKohdat = new List<Label>();
+		Label kohta1 = new Label("Peli ohi!");
+		Label kohta2 = new Label("Aloita uusi peli ");
+		Label kohta3 = new Label("Lopeta (Esc)");
+		kohta1.Position = new Vector(0, 40);
+		kohta2.Position = new Vector(0, 0);
+		kohta3.Position = new Vector(0, -40);
+		kohta1.TextColor = Color.White;
+		kohta2.TextColor = Color.White;
+		kohta3.TextColor = Color.White;
+		valikonKohdat.Add(kohta1);
+		valikonKohdat.Add(kohta2);
+		valikonKohdat.Add(kohta3);
+
+		// Lisätään valikon tekstit peliin.
+		foreach (Label valikonKohta in valikonKohdat)
+		{
+			Add(valikonKohta);
+		}
+
+		Keyboard.Listen(Key.Escape, ButtonState.Pressed, Exit, "Lopeta peli");
+		Mouse.ListenOn(kohta2, MouseButton.Left, ButtonState.Pressed, Begin, "Peli uudelleen");
+		Mouse.ListenOn(kohta3, MouseButton.Left, ButtonState.Pressed, Exit, "Lopeta");
+	}
+		
+		
+
 	#region Kuvan haku
 	public void LataaKuvat()
 	{
         taustaKuva = LoadImage ("Tausta");
-		sammakonKuva = LoadImage ("Sammakko/sammakko_0");
+		kuollutSammakko = LoadImage ("Sammakko/kuollutSammakko");
 		pyorailijatKuva = LoadImages (
 			"Pyorailijat/Pyora1",
 			"Pyorailijat/Pyora2",
@@ -133,6 +167,22 @@ public class SammakkoKadulla : PhysicsGame
 			"Sammakko/sammakko_4", 
 			"Sammakko/sammakko_5", 
 			"Sammakko/sammakko_6"
+		);
+		sammakonkieliAnimKuvat = LoadImages (
+			"Sammakko/sammakko_0",
+			"Sammakko/sammakko_kieli1",
+			"Sammakko/sammakko_kieli2",
+			"Sammakko/sammakko_kieli3"
+		);
+		karpanenSuussaAnimKuvat = LoadImages (
+			"Sammakko/karpanenSuussa_0",
+			"Sammakko/karpanenSuussa_1",
+			"Sammakko/karpanenSuussa_2",
+			"Sammakko/karpanenSuussa_3",
+			"Sammakko/karpanenSuussa_4",
+			"Sammakko/karpanenSuussa_5",
+			"Sammakko/karpanenSuussa_6"
+
 		);
 		poliisiAutoAnimKuvat = LoadImages (
 			"Autot/Poliisi1.1",
@@ -172,10 +222,17 @@ public class SammakkoKadulla : PhysicsGame
 	#region Sammakon logiikka
 	public void LuoSammakko(Vector paikka, double leveys, double korkeus)
 	{
+		Image sammakonKuva;
+		if (sammakollaOnKarpanen) {
+			sammakonKuva = karpanenSuussaAnimKuvat [0];
+		} else {
+			sammakonKuva = sammakkoAnimKuvat [0];
+		}
 		sammakko = new PhysicsObject(leveys, korkeus, Shape.FromImage(sammakonKuva));
 		sammakko.Image = sammakonKuva;
 		sammakko.Position = paikka;
 		sammakko.CanRotate = false;
+		sammakko.RotateImage = true;
 		sammakko.Tag = "sammakko";
 		Add(sammakko);
 		LiikutaSammakko ();
@@ -188,10 +245,11 @@ public class SammakkoKadulla : PhysicsGame
 		Keyboard.Listen( Key.Down, ButtonState.Pressed, LoikiAlas, null, sammakko, loikkimisNopeus );
 		Keyboard.Listen( Key.Up, ButtonState.Released, sammakko.StopVertical, null );
 		Keyboard.Listen( Key.Down, ButtonState.Released,sammakko.StopVertical , null );
-		Keyboard.Listen( Key.Left, ButtonState.Pressed, LiikutaVasemmalle, null, sammakko, loikkimisNopeus );
-		Keyboard.Listen( Key.Right, ButtonState.Pressed, LiikutaOikealle, null, sammakko, loikkimisNopeus );
+		Keyboard.Listen( Key.Left, ButtonState.Pressed, LoikiVasemmalle, null, sammakko, loikkimisNopeus );
+		Keyboard.Listen( Key.Right, ButtonState.Pressed, LoikiOikealle, null, sammakko, loikkimisNopeus );
 		Keyboard.Listen( Key.Left, ButtonState.Released, sammakko.StopHorizontal, null);
-		Keyboard.Listen( Key.Right, ButtonState.Released, sammakko.StopHorizontal, null );
+		Keyboard.Listen( Key.Right, ButtonState.Released, sammakko.StopHorizontal, null );  
+		Keyboard.Listen (Key.Space, ButtonState.Pressed, SammakonKieli, null);
 		AddCollisionHandler(sammakko, "pyorailija", SammakkoOsuu);
 		AddCollisionHandler(sammakko, "auto", SammakkoOsuu);
 		AddCollisionHandler(sammakko, "kotka", SammakkoOsuu);
@@ -199,7 +257,7 @@ public class SammakkoKadulla : PhysicsGame
 	}
 
 
-	void LiikutaVasemmalle( PhysicsObject hahmo, double nopeus)
+	void LoikiVasemmalle( PhysicsObject hahmo, double nopeus)
 	{
 		if (kulma.Degrees == 0)
 		{
@@ -213,11 +271,16 @@ public class SammakkoKadulla : PhysicsGame
 		hahmo.Angle = kulma;
 		hahmo.Move(new Vector(-nopeus, 0)); 
 		hyppyAani.Play (0.4, 0, 0);
-		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
+		if (sammakollaOnKarpanen) {
+			AnimoiSammakko (sammakko.Animation = new Animation (karpanenSuussaAnimKuvat), true);
+		} else {
+			AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
+		}
+
 	}
 
 
-	void LiikutaOikealle( PhysicsObject hahmo, double nopeus)
+	void LoikiOikealle( PhysicsObject hahmo, double nopeus)
 	{
 		if (kulma.Degrees == 0) 
 		{
@@ -230,7 +293,11 @@ public class SammakkoKadulla : PhysicsGame
 		hahmo.Angle = kulma;
 		hahmo.Move(new Vector(nopeus, 0));
 		hyppyAani.Play (0.4, 0, 0);
-		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
+		if (sammakollaOnKarpanen) {
+			AnimoiSammakko (sammakko.Animation = new Animation (karpanenSuussaAnimKuvat), true);
+		} else {
+			AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
+		}
 	}
 
 
@@ -244,7 +311,11 @@ public class SammakkoKadulla : PhysicsGame
 		}
 		hahmo.Move(new Vector(0, nopeus));
 		hyppyAani.Play (0.4, 0, 0);
-		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
+		if (sammakollaOnKarpanen) {
+			AnimoiSammakko (sammakko.Animation = new Animation (karpanenSuussaAnimKuvat), true);
+		} else {
+			AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
+		}
 	}
 
 
@@ -258,9 +329,25 @@ public class SammakkoKadulla : PhysicsGame
 		}
 		hahmo.Move(new Vector(0, -nopeus));
 		hyppyAani.Play (0.4, 0, 0);
-		AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
+		if (sammakollaOnKarpanen) {
+			AnimoiSammakko (sammakko.Animation = new Animation (karpanenSuussaAnimKuvat), true);
+		} else {
+			AnimoiSammakko (sammakko.Animation = new Animation (sammakkoAnimKuvat), true);
+		}
 	}
 
+	public void SammakonKieli(){
+		if (!sammakollaOnKarpanen) {
+			sammakko.Animation = new Animation (sammakonkieliAnimKuvat);
+			sammakko.Animation.FPS = 22;
+			sammakko.Animation.Start (1);
+			sammakonNuolaisu.Play ();
+			karpanen.Destroy ();
+			karpanenAani.Stop ();
+			sammakollaOnKarpanen = true;
+		}
+
+	}
 
 	public void AnimoiSammakko(Animation animaatio, bool tilanne)
 	{
@@ -296,11 +383,10 @@ public class SammakkoKadulla : PhysicsGame
 		sydamet.Destroy ();
 		sydanMaara--;
 		if (sydanMaara <= 0) {
-			MessageDisplay msg = new MessageDisplay ();
-			msg.BorderColor = Color.Black;
-			msg.Color = Color.Red;
-			msg.Add ("You Lost !!");
-			IsPaused = true;
+			sammakollaOnKarpanen = false;
+			sammakko.RotateImage = true;
+			sammakko.Image = kuollutSammakko;
+			PeliLoppui();
 		} else {
 			LuoSammakonSydamet (Screen.Right - 150, Screen.Top - 40, 25, 25, sydanMaara);
 		}
@@ -466,9 +552,9 @@ public class SammakkoKadulla : PhysicsGame
 		if(seina == vasenReuna || seina == oikeaReuna)
 		{
 			if (objekti.Tag.ToString () == "karpanen" && seina == vasenReuna) {
-				Karpanen (Image.Mirror(karpanenKuvat), Screen.Center.X - 400, Screen.Top - 20, 100, 100, new Vector (50, 0));
+				Karpanen (Image.Mirror(karpanenKuvat), Screen.Center.X - 400, Screen.Top - 20, 100, 100, new Vector (10, 0));
 			}else if (objekti.Tag.ToString () == "karpanen" && seina == oikeaReuna){
-				Karpanen (karpanenKuvat, Screen.Center.X + 400, Screen.Top - 20, 100, 100, new Vector (-50, 0));
+				Karpanen (karpanenKuvat, Screen.Center.X + 400, Screen.Top - 20, 100, 100, new Vector (-10, 0));
 			}
 			objekti.Destroy ();
 		}
@@ -558,9 +644,12 @@ public class SammakkoKadulla : PhysicsGame
 
 		if (aikaMittari.Value <= 0)
 		{
-			MessageDisplay.Add("Aika loppui...");
+			MessageDisplay.Add("Aika on päättynyt");
+			MessageDisplay.TextColor = Color.Red;
+			MessageDisplay.Position = new Vector (Screen.Center.X, Screen.Center.Y);
+			sammakollaOnKarpanen = false;
 			aikaLaskuri.Stop();
-
+			PeliLoppui();
 		}
 	}
 	#endregion
