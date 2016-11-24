@@ -51,6 +51,7 @@ public class SammakkoKadulla : PhysicsGame
 	int sydanMaara = 3;
 	Widget sydamet;
 	Timer aikaLaskuri;
+	Timer karpanenAaniAjastin;
 	bool sammakollaOnKarpanen = false;
 	List<Label> valikonKohdat;
 	#endregion
@@ -85,7 +86,6 @@ public class SammakkoKadulla : PhysicsGame
 		SetWindowSize(1024, 768, false);
 		MediaPlayer.Play ("Audio/CityTraffic");
 		MediaPlayer.IsRepeating = true;
-		karpanenAani.Play ();
 	}
 
 	protected override void Update (Time time)
@@ -95,24 +95,35 @@ public class SammakkoKadulla : PhysicsGame
 		} else if (sammakko.Y < Screen.Center.Y + 120) {
 			MediaPlayer.Volume = 1.0;
 		}
+		if (sammakollaOnKarpanen && sammakko.Position.Y <= -350) {
+			sammakollaOnKarpanen = true;
+			PeliLoppui ();
+			base.StopAll ();
+		}
 		base.Update (time);
 	}
 	#endregion
 
-	void PeliLoppui()
+	public void PeliLoppui()
 	{
 		IsPaused = true;
 		valikonKohdat = new List<Label>();
-		Label kohta1 = new Label("Peli ohi!");
-		Label kohta2 = new Label("Aloita uusi peli ");
+		Label menuOtsikko;
+		if (!sammakollaOnKarpanen) {
+			menuOtsikko = new Label ("Peli on ohi et saanut tällä kertaa kärpästä..");
+			menuOtsikko.TextColor = Color.BloodRed;
+		} else {
+			menuOtsikko = new Label ("Onneksi olkoon!! Sait kärpäsen kiini");
+			menuOtsikko.TextColor = Color.Green;
+		}
+		Label kohta2 = new Label("Pelaa uudelleen!");
 		Label kohta3 = new Label("Lopeta (Esc)");
-		kohta1.Position = new Vector(0, 40);
+		menuOtsikko.Position = new Vector(0, 40);
 		kohta2.Position = new Vector(0, 0);
 		kohta3.Position = new Vector(0, -40);
-		kohta1.TextColor = Color.White;
 		kohta2.TextColor = Color.White;
 		kohta3.TextColor = Color.White;
-		valikonKohdat.Add(kohta1);
+		valikonKohdat.Add(menuOtsikko);
 		valikonKohdat.Add(kohta2);
 		valikonKohdat.Add(kohta3);
 
@@ -232,7 +243,6 @@ public class SammakkoKadulla : PhysicsGame
 		sammakko.Image = sammakonKuva;
 		sammakko.Position = paikka;
 		sammakko.CanRotate = false;
-		sammakko.RotateImage = true;
 		sammakko.Tag = "sammakko";
 		Add(sammakko);
 		LiikutaSammakko ();
@@ -342,9 +352,12 @@ public class SammakkoKadulla : PhysicsGame
 			sammakko.Animation.FPS = 22;
 			sammakko.Animation.Start (1);
 			sammakonNuolaisu.Play ();
-			karpanen.Destroy ();
-			karpanenAani.Stop ();
-			sammakollaOnKarpanen = true;
+			Vector sammakonPaikka = sammakko.Position;
+			if (sammakonPaikka.Y >= Screen.Top - 30) {
+				karpanen.Destroy ();
+				karpanenAaniAjastin.Stop ();
+				sammakollaOnKarpanen = true;
+			}
 		}
 
 	}
@@ -627,7 +640,7 @@ public class SammakkoKadulla : PhysicsGame
 		};
 			kotkaAaniAjastin.Start();
 
-		Timer karpanenAaniAjastin = new Timer ();
+		karpanenAaniAjastin = new Timer ();
 		karpanenAaniAjastin.Interval = 2;
 		karpanenAaniAjastin.Timeout += delegate() {
 			karpanenAani.Play();
